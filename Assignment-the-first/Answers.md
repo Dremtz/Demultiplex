@@ -13,7 +13,7 @@
 2. Per-base NT distribution
     1. Use markdown to insert your 4 histograms here.
     2. **YOUR ANSWER HERE**
-    3. **Index2 = 3976613, Index3 = **
+    3. **Index2 = 3976613, Index3 = 3328051**
     
 ## Part 2
 1. Define the problem
