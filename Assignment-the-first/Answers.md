@@ -30,7 +30,7 @@
 1 output file for each matched index(24) for each read direction(2) = 1*24*2 = 48 
 1 output file for hopped forward reads and reverse reads = 2
 1 output file for unmatched reads (contain N) for each direction = 2
-    52 total output files
+    52 total output files**
 
 3. Upload your [4 input FASTQ files](../TEST-input_FASTQ) and your [>=6 expected output FASTQ files](../TEST-output_FASTQ).
 4. Pseudocode
