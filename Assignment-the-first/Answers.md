@@ -23,7 +23,14 @@
     
 ## Part 2
 1. Define the problem
+**We need to parse through 4 seperate line matched files and sort them in to the proper subfiles by barcode. Index files need to be assessed and determine whether they match, are hopped or unmatched. The corresponding lines from the read files need to be stored according to the determination made by analyzing the index files. Also, our files are very very large so we want to loop through these files as few times as possible.**
 2. Describe output
+**All output files will be fastQ files
+1 output file for each matched index(24) for each read direction(2) = 1*24*2 = 48 
+1 output file for hopped forward reads and reverse reads = 2
+1 output file for unmatched reads (contain N) for each direction = 2
+    52 total output files
+
 3. Upload your [4 input FASTQ files](../TEST-input_FASTQ) and your [>=6 expected output FASTQ files](../TEST-output_FASTQ).
 4. Pseudocode
 5. High level functions. For each function, be sure to include:
