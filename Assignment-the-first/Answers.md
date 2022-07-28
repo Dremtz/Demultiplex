@@ -14,9 +14,9 @@
     1. Use markdown to insert your 4 histograms here.
 
 ![](https://github.com/Dremtz/Demultiplex/blob/master/Assignment-the-first/R1_Histogram_a1.png)
-![]()
-![]()
-![]()
+![](https://github.com/Dremtz/Demultiplex/blob/master/Assignment-the-first/R2_A1_graph.png)
+![](https://github.com/Dremtz/Demultiplex/blob/master/Assignment-the-first/R3_A1_graph.png)
+![](https://github.com/Dremtz/Demultiplex/blob/master/Assignment-the-first/R4_Histogram_a1.png)
     2. **Cutting off at 35 seems like an appropriate data cutoff since the quality score for the early sequences degrades fairly sharply from the upper ~39 to <36 in sequence positions under 10. Also, trimming at Qscore 35 will retain the majority of our data**
     3. **Index2 = 3976613, Index3 = 3328051
  zcat 1294_S1_L008_R2_001.fastq.gz | sed -n '2~4p' | grep -c N**
