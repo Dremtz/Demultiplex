@@ -1,0 +1,181 @@
+#!/usr/bin/env python
+
+#run this in bash before script
+#BASH COMMAND TO RUN TEST FILES
+#1. dir=/projects/bgmp/ano/Bi622/Demultiplex/TEST-input_FASTQ
+#2 ./demux_final -i $dir/indexes.txt -R1 $dir/R1unittest.fastq.gz -R2 $dir/R2unittest.fastq.gz -R3 $dir/R3unittest.fastq.gz  -R4 $dir/R4unittest.fastq.gz -L 101 
+
+
+#BASH COMMAND TO RUN ACTUAL FILES
+#3. $dir=/projects/bgmp/shared/2017_sequencing"
+#4. ./demux_final -i $dir/indexes.txt  -R1 $dir/1294_S1_L008_R1_001.fastq.gz -R2 $dir/1294_S1_L008_R2_001.fastq.gz -R3 $dir/1294_S1_L008_R3_001.fastq.gz -R4 $dir/1294_S1_L008_R4_001.fastq.gz -L 101 -o /projects/bgmp/ano/Bi622/Demultiplex/Assignment-the-third/demux_output
+
+
+import numpy as np
+import bioinfo
+import matplotlib.pyplot as plt
+import gzip
+import argparse
+import itertools
+
+#Create reverse complement function
+bases = "ATCGN"
+complement = "TAGCN"
+reversecalc = str.maketrans(bases,complement)
+def rev_comp(seq: str) -> str:
+    return seq.translate(reversecalc)[::-1]
+
+#create is high quality function to check phred scores
+def is_highquality(letter: str) -> int:
+    for i in letter:
+        if ord(i)-33 < 30:
+            return False
+    return True
+
+#Should I use these for all 4 input files?
+def get_args():
+    parser = argparse.ArgumentParser(description = "client input program")
+    parser.add_argument("-i", "--indexfilename", help = "index list", type=str, required = True)
+    parser.add_argument("-R1", "--R1filename", help = "specify filename", type=str, required = True)
+    parser.add_argument("-R2", "--R2filename", help = "specify filename", type=str, required = True)
+    parser.add_argument("-R3", "--R3filename", help = "specify filename", type=str, required = True)
+    parser.add_argument("-R4", "--R4filename", help = "specify filename", type=str, required = True)
+    parser.add_argument("-L", "--readlength", help = "specify readlength", type=int, required = True)
+    parser.add_argument("-o", help = "specify outfile name", type=str, required = False)
+
+    return parser.parse_args()
+
+#make arg input name easier to type
+clinput = get_args()
+i = clinput.indexfilename
+R1 = clinput.R1filename
+R2 = clinput.R2filename
+R3 = clinput.R3filename
+R4 = clinput.R4filename
+L = clinput.readlength
+O = clinput.o
+
+#create empty dictionary to populate with barcodes
+index_set = {}
+index_set = set() #change dictionary to set
+
+#loop through indexes grabbing only the barcodes and store in a list
+iterate = 0
+headline = True #create a boolean variable and set it to True so we can ignore our first run through our loop and thus not grab the header line
+with open(i, "rt") as indexes:
+    for line in indexes:
+        if headline == False:
+            iterate +=1
+            l = line.split('\t')
+            index_set.add(l[-1].strip('\n')) #add line lenght-1 to my index_set, then strip the new line from the set
+            
+        headline = False #set out boolean variable to False at the end of the first run through so that we grab every index line going forward
+    
+filehandle_dict = dict.fromkeys(index_set, 0) #Turn our index set in to the keys in a dictionary
+
+#create an output file for each index x2 (1 for R1 and 1 for R2)
+for index in index_set:
+    filehandle_dict[index] = [open("matched_"+index+"_R1.fastq", 'w'), open("matched_"+index+"_R2.fastq", 'w')]
+
+
+#create output file for unmatched and hopped files
+unknown_R1 = open("unknown_R1.fastq", 'w')
+unknown_R2 = open("unknown_R2.fastq", 'w')
+hopped_R1 = open("hopped_R1.fastq", "w")
+hopped_R2 = open("hopped_R2.fastq", 'w')
+
+#open 1 index text file and 4 zipped fastq files (2 bio sequence files and 2 barcode/index files)
+unknown_count = 0
+hopped_count = 0
+matched_count = 0
+
+index_count = {}
+permutes = itertools.permutations(index_set, 2)
+
+for x in permutes:
+    index_count[x] = 0
+
+with gzip.open(R1, "rt") as R1, gzip.open(R2, "rt") as R2, gzip.open(R3, "rt") as R3, gzip.open(R4, "rt") as R4:
+    while True:
+        #create variable that is just the header line of each file and strip the new lines from 1st file
+        header1 = R1.readline().strip("\n")
+        if header1 == '': #break while loop when readline returns an empty string ''
+            break
+        read1 = R1.readline().strip()
+        plus1 = R1.readline().strip()
+        qscore1 = R1.readline().strip()
+        #same for 2nd file
+        header2 = R2.readline().strip()
+        index1 = R2.readline().strip()
+        plus2 = R2.readline().strip()
+        qscore2 = R2.readline().strip()
+        #same 3rd file
+        header3 = R3.readline().strip()
+        index2 = R3.readline().strip()
+        plus3 = R3.readline().strip()
+        qscore3 = R3.readline().strip()
+        #same 4th file
+        header4 = R4.readline().strip()
+        read2 = R4.readline().strip()
+        plus4 = R4.readline().strip()
+        qscore4 = R4.readline().strip()
+        #Index files w/ N in sequence are written in to unknown files
+
+        index2 = rev_comp(index2) #set index2 as reverse compliment for the entire loop
+        if index1 not in filehandle_dict or index2 not in filehandle_dict:
+            unknown_R1.write(header1+"_"+index1+"_"+index2+"\n"+read1+"\n+\n"+qscore1+"\n") #unmatched indexes write to unknown
+            unknown_R2.write(header4+"_"+index1+"_"+index2+"\n"+read2+"\n+\n"+qscore4+"\n")
+            unknown_count += 1
+
+        elif index1 != index2: 
+            if is_highquality(qscore2) and is_highquality(qscore3):
+                hopped_R1.write(header1+"_"+index1+"_"+index2+"\n"+read1+"\n+\n"+qscore1+"\n") #HQ but non-reverse comp matching indexes write to hoppped
+                hopped_R2.write(header4+"_"+index1+"_"+index2+"\n"+read2+"\n+\n"+qscore4+"\n")
+                hopped_count +=1
+                index_count[(index1,index2)] +=1
+
+            else:
+                unknown_R1.write(header1+"_"+index1+"_"+index2+"\n"+read1+"\n+\n"+qscore1+"\n") # LowQ non-reverse comp matches write to unknown
+                unknown_R2.write(header4+"_"+index1+"_"+index2+"\n"+read2+"\n+\n"+qscore4+"\n")
+                unknown_count += 1
+
+        elif index1 == index2:
+            if is_highquality(qscore1) and is_highquality(qscore4): #matched the index to the it's reverse compliment, call high quality function, if it's true then next line
+                filehandle_dict[index1][0].write(header1+"_"+index1+"_"+index2+"\n"+read1+"\n+\n"+qscore1+"\n")
+                filehandle_dict[index1][1].write(header4+"_"+index1+"_"+index2+"\n"+read2+"\n+\n"+qscore4+"\n")  #write output in to an existing matched file
+                matched_count += 1
+                
+                if (index1,index2) in index_count: #python knows this is a tuple because of the comma ,
+                    index_count[(index1,index2)] +=1
+                else: #if it doesn't find tuple key then create the tuple
+                    index_count[(index1,index2)] = 1
+            else:
+                unknown_R1.write(header1+"_"+index1+"_"+index2+"\n"+read1+"\n+\n"+qscore1+"\n") #FIX WOULD THIS HAVE DONE IT?
+                unknown_R2.write(header4+"_"+index1+"_"+index2+"\n"+read2+"\n+\n"+qscore4+"\n")
+                unknown_count += 1
+        else:
+            print("this shouldn't be printing!")
+
+
+for key in filehandle_dict:
+    filehandle_dict[key][0].close()
+    filehandle_dict[key][1].close()
+
+
+unknown_R1.close()
+unknown_R2.close()
+hopped_R1.close()
+hopped_R2.close()
+
+for x in index_count:
+    if x[0] == x[1]:
+        print("matched indexes", x, index_count[x], sep = "\t")
+
+for x in index_count:
+    if x[0] != x[1]:
+        print("unmatched indexes", x, index_count[x], sep = "\t")
+
+
+print("unknown count", unknown_count)
+print("hopped count", hopped_count)
+print("matched count", matched_count)
